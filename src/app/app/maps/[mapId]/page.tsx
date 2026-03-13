@@ -11,7 +11,7 @@ const MapWorkspace = dynamic(() => import('@/components/map/MapWorkspace'), {
 
 function MapLoadingSkeleton() {
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-[#0A0E1A]">
+    <div className="flex h-full w-full items-center justify-center bg-[#0A0E1A]">
       <div className="flex flex-col items-center gap-4">
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#374151] border-t-[#F59E0B]" />
         <div className="text-sm text-[#9CA3AF]">Loading map workspace...</div>
@@ -38,7 +38,7 @@ export default function MapWorkspacePage() {
 
   return (
     <Suspense fallback={<MapLoadingSkeleton />}>
-      <div className="h-screen w-full overflow-hidden bg-[#0A0E1A]">
+      <div className="h-full w-full overflow-hidden bg-[#0A0E1A]">
         <MapWorkspace mapId={mapId} />
       </div>
     </Suspense>

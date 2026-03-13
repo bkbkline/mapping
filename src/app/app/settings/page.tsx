@@ -212,13 +212,9 @@ export default function SettingsPage() {
   const handleInviteMember = async () => {
     if (!inviteEmail.trim() || !org?.id) return;
     setSaving(true);
-    // In production, this would send an invite email via edge function
-    await supabase.from('invitations').insert({
-      org_id: org.id,
-      email: inviteEmail.trim(),
-      role: 'viewer',
-      invited_by: profile?.id,
-    });
+    // TODO: In production, send invite via edge function
+    // For now, log the invite attempt (invitations table not yet created)
+    console.log('[Settings] Invite member:', inviteEmail.trim(), 'to org:', org.id);
     setInviteEmail('');
     setSaving(false);
   };

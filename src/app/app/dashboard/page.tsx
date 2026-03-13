@@ -35,9 +35,9 @@ interface DashboardStats {
 interface AuditLogEntry {
   id: string;
   action: string;
-  entity_type: string;
-  entity_id: string;
-  details: Record<string, unknown> | null;
+  resource_type: string;
+  resource_id: string;
+  metadata: Record<string, unknown> | null;
   created_at: string;
   user_id: string;
   profiles?: { full_name: string | null; email: string } | null;
@@ -140,7 +140,7 @@ export default function DashboardPage() {
 
         // Fetch saved parcels count
         const { count: parcelsCount } = await supabase
-          .from('collection_parcels')
+          .from('collection_items')
           .select('*', { count: 'exact', head: true });
 
         // Fetch audit log
@@ -339,14 +339,14 @@ export default function DashboardPage() {
                           {entry.profiles?.full_name || entry.profiles?.email || 'Unknown user'}
                         </span>{' '}
                         <span className="text-[#9CA3AF]">
-                          {entry.action}d a {entry.entity_type}
+                          {entry.action}d a {entry.resource_type}
                         </span>
                       </p>
-                      {entry.details && (
+                      {entry.metadata && (
                         <p className="mt-0.5 text-xs text-[#9CA3AF] truncate">
-                          {typeof entry.details === 'object'
-                            ? (entry.details as Record<string, unknown>).title as string ||
-                              (entry.details as Record<string, unknown>).name as string ||
+                          {typeof entry.metadata === 'object'
+                            ? (entry.metadata as Record<string, unknown>).title as string ||
+                              (entry.metadata as Record<string, unknown>).name as string ||
                               ''
                             : ''}
                         </p>

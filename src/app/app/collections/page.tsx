@@ -131,7 +131,7 @@ export default function CollectionsPage() {
         const collectionsWithCounts = await Promise.all(
           (data as Collection[]).map(async (col) => {
             const { data: parcels } = await supabase
-              .from('collection_parcels')
+              .from('collection_items')
               .select('status')
               .eq('collection_id', col.id);
 
