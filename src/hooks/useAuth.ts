@@ -13,27 +13,34 @@ export function useAuth() {
   useEffect(() => {
     const getSession = async () => {
       setLoading(true);
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authUser.id)
-          .single();
-
-        let orgData = null;
-        if (profileData?.org_id) {
-          const { data } = await supabase
-            .from('orgs')
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const { data: profileData } = await supabase
+            .from('profiles')
             .select('*')
-            .eq('id', profileData.org_id)
+            .eq('id', authUser.id)
             .single();
-          orgData = data;
+
+          let orgData = null;
+          if (profileData?.org_id) {
+            const { data } = await supabase
+              .from('orgs')
+              .select('*')
+              .eq('id', profileData.org_id)
+              .single();
+            orgData = data;
+          }
+          if (profileData) {
+            setSession(authUser, profileData, orgData);
+          } else {
+            // Profile not found (RLS or not yet created) — still stop loading
+            setLoading(false);
+          }
+        } else {
+          clearSession();
         }
-        if (profileData) {
-          setSession(authUser, profileData, orgData);
-        }
-      } else {
+      } catch {
         clearSession();
       }
     };
