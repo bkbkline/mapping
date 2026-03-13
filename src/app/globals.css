@@ -1,93 +1,126 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --bg-primary: #0A0E1A;
+    --bg-secondary: #111827;
+    --bg-panel: #1F2937;
+    --border: #374151;
+    --text-primary: #F9FAFB;
+    --text-muted: #9CA3AF;
+    --accent: #F59E0B;
+    --accent-hover: #D97706;
+    --success: #10B981;
+    --danger: #EF4444;
+    --warning: #FBBF24;
+    --info: #3B82F6;
+
+    --background: #0A0E1A;
+    --foreground: #F9FAFB;
+    --card: #111827;
+    --card-foreground: #F9FAFB;
+    --popover: #1F2937;
+    --popover-foreground: #F9FAFB;
+    --primary: #F59E0B;
+    --primary-foreground: #0A0E1A;
+    --secondary: #1F2937;
+    --secondary-foreground: #F9FAFB;
+    --muted: #1F2937;
+    --muted-foreground: #9CA3AF;
+    --accent: #F59E0B;
+    --accent-foreground: #0A0E1A;
+    --destructive: #EF4444;
+    --border: #374151;
+    --input: #374151;
+    --ring: #F59E0B;
+    --radius: 0.5rem;
+
+    --sidebar: #111827;
+    --sidebar-foreground: #F9FAFB;
+    --sidebar-primary: #F59E0B;
+    --sidebar-primary-foreground: #0A0E1A;
+    --sidebar-accent: #1F2937;
+    --sidebar-accent-foreground: #F9FAFB;
+    --sidebar-border: #374151;
+    --sidebar-ring: #F59E0B;
+  }
+
+  * {
+    @apply border-[var(--border)];
+  }
+
+  body {
+    @apply bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans;
+    font-family: 'DM Sans', sans-serif;
+  }
+}
+
 @layer utilities {
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
   .text-balance {
     text-wrap: balance;
   }
 }
 
-@layer base {
-  :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.809 0.105 251.813);
-    --chart-2: oklch(0.623 0.214 259.815);
-    --chart-3: oklch(0.546 0.245 262.881);
-    --chart-4: oklch(0.488 0.243 264.376);
-    --chart-5: oklch(0.424 0.199 265.638);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
-  }
-  .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.809 0.105 251.813);
-    --chart-2: oklch(0.623 0.214 259.815);
-    --chart-3: oklch(0.546 0.245 262.881);
-    --chart-4: oklch(0.488 0.243 264.376);
-    --chart-5: oklch(0.424 0.199 265.638);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
-  }
-  .theme {
-    --font-sans: var(--font-sans);
-  }
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
+/* Mapbox GL overrides */
+.mapboxgl-map {
+  font-family: 'DM Sans', sans-serif;
+}
+.mapboxgl-ctrl-group {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border) !important;
+}
+.mapboxgl-ctrl-group button {
+  background-color: transparent !important;
+}
+.mapboxgl-ctrl-group button + button {
+  border-top-color: var(--border) !important;
+}
+.mapboxgl-ctrl-group button:hover {
+  background-color: var(--bg-panel) !important;
+}
+.mapboxgl-ctrl-icon {
+  filter: invert(1);
+}
+.mapboxgl-popup-content {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+}
+.mapboxgl-popup-tip {
+  border-top-color: var(--bg-secondary) !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Safe area for mobile */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
