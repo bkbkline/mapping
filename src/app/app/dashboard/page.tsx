@@ -1,63 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
-  Map,
-  FolderOpen,
-  Bookmark,
-  HardDrive,
   Plus,
-  Upload,
-  FolderPlus,
-  Download,
+  Map,
+  ChevronRight,
   Clock,
-  FileText,
-  Trash2,
-  Share2,
-  Edit,
-  Eye,
+  X,
+  Layers,
 } from 'lucide-react';
 import type { MapRecord } from '@/types';
+import type mapboxgl from 'mapbox-gl';
 
-interface DashboardStats {
-  totalMaps: number;
-  totalCollections: number;
-  totalParcels: number;
-  storageUsed: string;
-}
-
-interface AuditLogEntry {
-  id: string;
-  action: string;
-  resource_type: string;
-  resource_id: string;
-  metadata: Record<string, unknown> | null;
-  created_at: string;
-  user_id: string;
-  profiles?: { full_name: string | null; email: string } | null;
-}
-
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
+const DashboardMap = dynamic(
+  () => import('@/components/map/DashboardMap'),
+  { ssr: false, loading: () => null },
+);
 
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr);
@@ -66,7 +29,6 @@ function formatRelativeTime(dateStr: string): string {
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
-
   if (diffMins < 1) return 'Just now';
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
@@ -74,191 +36,188 @@ function formatRelativeTime(dateStr: string): string {
   return date.toLocaleDateString();
 }
 
-function getActionIcon(action: string) {
-  switch (action) {
-    case 'create':
-      return <Plus className="h-4 w-4 text-green-400" />;
-    case 'update':
-    case 'edit':
-      return <Edit className="h-4 w-4 text-blue-400" />;
-    case 'delete':
-      return <Trash2 className="h-4 w-4 text-red-400" />;
-    case 'share':
-      return <Share2 className="h-4 w-4 text-purple-400" />;
-    case 'view':
-      return <Eye className="h-4 w-4 text-[#9CA3AF]" />;
-    case 'export':
-      return <Download className="h-4 w-4 text-[#F59E0B]" />;
-    default:
-      return <FileText className="h-4 w-4 text-[#9CA3AF]" />;
-  }
-}
-
-function getShareBadge(mode: string) {
-  switch (mode) {
-    case 'public':
-      return <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px]">Public</Badge>;
-    case 'unlisted':
-      return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px]">Unlisted</Badge>;
-    default:
-      return <Badge className="bg-[#374151] text-[#9CA3AF] border-[#374151] text-[10px]">Private</Badge>;
-  }
-}
-
 export default function DashboardPage() {
   const { profile } = useAuth();
   const supabase = createClient();
+  const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
 
-  const [stats, setStats] = useState<DashboardStats>({
-    totalMaps: 0,
-    totalCollections: 0,
-    totalParcels: 0,
-    storageUsed: '0 MB',
-  });
   const [recentMaps, setRecentMaps] = useState<MapRecord[]>([]);
-  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
 
-  const firstName = profile?.full_name?.split(' ')[0] || 'there';
+  const firstName = profile?.full_name?.split(' ')[0] || profile?.email?.split('@')[0] || '';
 
   useEffect(() => {
-    async function fetchDashboardData() {
+    async function fetchMaps() {
       setLoading(true);
-      try {
-        // Fetch maps count and recent maps
-        const { data: maps, count: mapsCount } = await supabase
-          .from('maps')
-          .select('*', { count: 'exact' })
-          .eq('is_archived', false)
-          .order('updated_at', { ascending: false })
-          .limit(8);
-
-        // Fetch collections count
-        const { count: collectionsCount } = await supabase
-          .from('collections')
-          .select('*', { count: 'exact', head: true });
-
-        // Fetch saved parcels count
-        const { count: parcelsCount } = await supabase
-          .from('collection_items')
-          .select('*', { count: 'exact', head: true });
-
-        // Fetch audit log
-        const { data: auditData } = await supabase
-          .from('audit_log')
-          .select('*, profiles(full_name, email)')
-          .order('created_at', { ascending: false })
-          .limit(20);
-
-        setStats({
-          totalMaps: mapsCount || 0,
-          totalCollections: collectionsCount || 0,
-          totalParcels: parcelsCount || 0,
-          storageUsed: `${((mapsCount || 0) * 2.3).toFixed(1)} MB`,
-        });
-
-        setRecentMaps((maps as MapRecord[]) || []);
-        setAuditLog((auditData as AuditLogEntry[]) || []);
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
+      const { data } = await supabase
+        .from('maps')
+        .select('*')
+        .eq('is_archived', false)
+        .order('updated_at', { ascending: false })
+        .limit(20);
+      setRecentMaps((data as MapRecord[]) || []);
+      setLoading(false);
     }
-
-    fetchDashboardData();
+    fetchMaps();
   }, [supabase]);
 
-  const statCards = [
-    { label: 'Total Maps', value: stats.totalMaps, icon: Map, color: 'text-blue-400' },
-    { label: 'Total Collections', value: stats.totalCollections, icon: FolderOpen, color: 'text-purple-400' },
-    { label: 'Saved Parcels', value: stats.totalParcels, icon: Bookmark, color: 'text-green-400' },
-    { label: 'Storage Used', value: stats.storageUsed, icon: HardDrive, color: 'text-[#F59E0B]' },
-  ];
+  const handleMapReady = useCallback((map: mapboxgl.Map) => {
+    mapInstanceRef.current = map;
+  }, []);
+
+  const flyToMap = useCallback((mapRecord: MapRecord) => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    map.flyTo({
+      center: [mapRecord.center_lng, mapRecord.center_lat],
+      zoom: mapRecord.zoom,
+      duration: 2000,
+    });
+  }, []);
 
   return (
-    <div className="min-h-full bg-[#0A0E1A] p-6">
-      {/* Welcome Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-[#F9FAFB]">
-          {getGreeting()}, {firstName}
-        </h1>
-        <p className="mt-1 text-sm text-[#9CA3AF]">{formatDate(new Date())}</p>
-      </div>
+    <div className="relative h-full w-full">
+      {/* Full-screen satellite map background */}
+      <DashboardMap onMapReady={handleMapReady} />
 
-      {/* Quick Stats */}
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((stat) => (
-          <Card key={stat.label} className="border-[#374151] bg-[#1F2937]">
-            <CardContent className="flex items-center gap-4 pt-0">
-              <div className={`rounded-lg bg-[#111827] p-3 ${stat.color}`}>
-                <stat.icon className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm text-[#9CA3AF]">{stat.label}</p>
-                <p className="text-2xl font-semibold text-[#F9FAFB]">
-                  {loading ? '...' : stat.value}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Floating greeting + quick actions — top left */}
+      <div className="absolute left-4 top-4 z-10 flex flex-col gap-3">
+        {/* Welcome card */}
+        <div className="rounded-xl bg-[#0A0E1A]/80 backdrop-blur-md border border-[#374151]/60 px-5 py-4 shadow-2xl">
+          <h1 className="text-lg font-semibold text-[#F9FAFB]">
+            {firstName ? `Welcome, ${firstName}` : 'Land Intel'}
+          </h1>
+          <p className="mt-0.5 text-xs text-[#9CA3AF]">
+            {recentMaps.length} map{recentMaps.length !== 1 ? 's' : ''} saved
+          </p>
+        </div>
 
-      {/* Recent Maps */}
-      <div className="mb-8">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-[#F9FAFB]">Recent Maps</h2>
-          <Link href="/app/maps">
-            <Button variant="ghost" className="text-[#9CA3AF] hover:text-[#F9FAFB]">
-              View all
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          <Link href="/app/maps/new">
+            <Button
+              size="sm"
+              className="bg-[#F59E0B] text-[#0A0E1A] hover:bg-[#F59E0B]/90 shadow-lg"
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              New Map
             </Button>
           </Link>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-[#374151]/60 bg-[#0A0E1A]/80 backdrop-blur-md text-[#F9FAFB] hover:bg-[#1F2937]/80 shadow-lg"
+            onClick={() => setPanelOpen(!panelOpen)}
+          >
+            <Layers className="mr-1 h-4 w-4" />
+            My Maps
+          </Button>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {loading
-            ? Array.from({ length: 4 }).map((_, i) => (
-                <Card key={i} className="border-[#374151] bg-[#1F2937] animate-pulse">
-                  <div className="h-32 rounded-t-xl bg-[#111827]" />
-                  <CardContent>
-                    <div className="h-4 w-3/4 rounded bg-[#374151] mb-2" />
-                    <div className="h-3 w-1/2 rounded bg-[#374151]" />
-                  </CardContent>
-                </Card>
-              ))
-            : recentMaps.map((map) => (
-                <Link key={map.id} href={`/app/maps/${map.id}`}>
-                  <Card className="group border-[#374151] bg-[#1F2937] transition-all hover:border-[#F59E0B]/40 hover:bg-[#1F2937]/80 cursor-pointer">
-                    {/* Thumbnail placeholder */}
-                    <div className="relative h-32 rounded-t-xl bg-[#111827] flex items-center justify-center overflow-hidden">
-                      <Map className="h-10 w-10 text-[#374151] group-hover:text-[#F59E0B]/30 transition-colors" />
-                      <div className="absolute top-2 right-2">
-                        {getShareBadge(map.share_mode)}
-                      </div>
+      </div>
+
+      {/* Slide-out Maps panel — left side */}
+      <div
+        className={`absolute left-0 top-0 z-20 h-full transition-transform duration-300 ease-in-out ${
+          panelOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex h-full w-80 flex-col bg-[#0A0E1A]/90 backdrop-blur-xl border-r border-[#374151]/60 shadow-2xl">
+          {/* Panel header */}
+          <div className="flex items-center justify-between border-b border-[#374151]/60 px-4 py-3">
+            <h2 className="text-sm font-semibold text-[#F9FAFB]">My Maps</h2>
+            <button
+              onClick={() => setPanelOpen(false)}
+              className="rounded-md p-1 text-[#9CA3AF] hover:bg-[#1F2937] hover:text-[#F9FAFB]"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* New map button */}
+          <div className="px-4 py-3 border-b border-[#374151]/40">
+            <Link href="/app/maps/new" className="block">
+              <Button
+                size="sm"
+                className="w-full bg-[#F59E0B] text-[#0A0E1A] hover:bg-[#F59E0B]/90"
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                Create New Map
+              </Button>
+            </Link>
+          </div>
+
+          {/* Maps list */}
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="space-y-0">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 border-b border-[#374151]/30 px-4 py-3 animate-pulse"
+                  >
+                    <div className="h-10 w-10 rounded-lg bg-[#374151]/50" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 w-3/4 rounded bg-[#374151]/50" />
+                      <div className="h-2 w-1/2 rounded bg-[#374151]/50" />
                     </div>
-                    <CardContent className="pt-0">
-                      <h3 className="font-medium text-[#F9FAFB] truncate">{map.title}</h3>
-                      {map.description && (
-                        <p className="mt-1 text-xs text-[#9CA3AF] line-clamp-2">
-                          {map.description}
-                        </p>
-                      )}
-                      <div className="mt-2 flex items-center gap-1 text-xs text-[#9CA3AF]">
-                        <Clock className="h-3 w-3" />
-                        <span>{formatRelativeTime(map.updated_at)}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-          {!loading && recentMaps.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
-              <Map className="mb-3 h-10 w-10 text-[#374151]" />
-              <p className="text-sm text-[#9CA3AF]">No maps yet. Create your first map to get started.</p>
-              <Link href="/app/maps/new" className="mt-3">
-                <Button className="bg-[#F59E0B] text-[#0A0E1A] hover:bg-[#F59E0B]/90">
-                  <Plus className="h-4 w-4" />
-                  New Map
+                  </div>
+                ))}
+              </div>
+            ) : recentMaps.length === 0 ? (
+              <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+                <Map className="mb-3 h-10 w-10 text-[#374151]" />
+                <p className="text-sm text-[#9CA3AF]">No maps yet</p>
+                <p className="mt-1 text-xs text-[#9CA3AF]/70">
+                  Click &quot;Create New Map&quot; to get started
+                </p>
+              </div>
+            ) : (
+              recentMaps.map((mapRecord) => (
+                <button
+                  key={mapRecord.id}
+                  className="group flex w-full items-center gap-3 border-b border-[#374151]/30 px-4 py-3 text-left transition-colors hover:bg-[#1F2937]/60"
+                  onClick={() => {
+                    flyToMap(mapRecord);
+                    setPanelOpen(false);
+                  }}
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#1F2937] group-hover:bg-[#F59E0B]/10">
+                    <Map className="h-5 w-5 text-[#9CA3AF] group-hover:text-[#F59E0B]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-[#F9FAFB]">
+                      {mapRecord.title}
+                    </p>
+                    <div className="flex items-center gap-1 text-xs text-[#9CA3AF]">
+                      <Clock className="h-3 w-3" />
+                      <span>{formatRelativeTime(mapRecord.updated_at)}</span>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/app/maps/${mapRecord.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="rounded-md p-1.5 text-[#9CA3AF] opacity-0 transition-opacity hover:bg-[#374151] hover:text-[#F9FAFB] group-hover:opacity-100"
+                    title="Open full map workspace"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </button>
+              ))
+            )}
+          </div>
+
+          {/* Footer link */}
+          {recentMaps.length > 0 && (
+            <div className="border-t border-[#374151]/60 px-4 py-3">
+              <Link href="/app/maps">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-[#9CA3AF] hover:text-[#F9FAFB]"
+                >
+                  View all maps
+                  <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
             </div>
@@ -266,107 +225,16 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="mb-8">
-        <h2 className="mb-4 text-lg font-semibold text-[#F9FAFB]">Quick Actions</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Link href="/app/maps/new">
-            <Button
-              variant="outline"
-              className="h-auto w-full flex-col gap-2 border-[#374151] bg-[#111827] py-4 text-[#F9FAFB] hover:border-[#F59E0B]/40 hover:bg-[#1F2937]"
-            >
-              <Plus className="h-5 w-5 text-[#F59E0B]" />
-              <span className="text-xs">New Map</span>
-            </Button>
-          </Link>
-          <Link href="/app/layers">
-            <Button
-              variant="outline"
-              className="h-auto w-full flex-col gap-2 border-[#374151] bg-[#111827] py-4 text-[#F9FAFB] hover:border-[#F59E0B]/40 hover:bg-[#1F2937]"
-            >
-              <Upload className="h-5 w-5 text-blue-400" />
-              <span className="text-xs">Import Layer</span>
-            </Button>
-          </Link>
-          <Link href="/app/collections">
-            <Button
-              variant="outline"
-              className="h-auto w-full flex-col gap-2 border-[#374151] bg-[#111827] py-4 text-[#F9FAFB] hover:border-[#F59E0B]/40 hover:bg-[#1F2937]"
-            >
-              <FolderPlus className="h-5 w-5 text-purple-400" />
-              <span className="text-xs">New Collection</span>
-            </Button>
-          </Link>
-          <Link href="/app/exports">
-            <Button
-              variant="outline"
-              className="h-auto w-full flex-col gap-2 border-[#374151] bg-[#111827] py-4 text-[#F9FAFB] hover:border-[#F59E0B]/40 hover:bg-[#1F2937]"
-            >
-              <Download className="h-5 w-5 text-green-400" />
-              <span className="text-xs">Export All</span>
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div>
-        <h2 className="mb-4 text-lg font-semibold text-[#F9FAFB]">Recent Activity</h2>
-        <Card className="border-[#374151] bg-[#1F2937]">
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="space-y-0">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 border-b border-[#374151] px-4 py-3 last:border-0 animate-pulse">
-                    <div className="h-8 w-8 rounded-full bg-[#374151]" />
-                    <div className="flex-1">
-                      <div className="h-3 w-3/4 rounded bg-[#374151] mb-1" />
-                      <div className="h-2 w-1/4 rounded bg-[#374151]" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : auditLog.length > 0 ? (
-              <div className="divide-y divide-[#374151]">
-                {auditLog.map((entry) => (
-                  <div key={entry.id} className="flex items-start gap-3 px-4 py-3">
-                    <div className="mt-0.5 rounded-full bg-[#111827] p-2">
-                      {getActionIcon(entry.action)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[#F9FAFB]">
-                        <span className="font-medium">
-                          {entry.profiles?.full_name || entry.profiles?.email || 'Unknown user'}
-                        </span>{' '}
-                        <span className="text-[#9CA3AF]">
-                          {entry.action}d a {entry.resource_type}
-                        </span>
-                      </p>
-                      {entry.metadata && (
-                        <p className="mt-0.5 text-xs text-[#9CA3AF] truncate">
-                          {typeof entry.metadata === 'object'
-                            ? (entry.metadata as Record<string, unknown>).title as string ||
-                              (entry.metadata as Record<string, unknown>).name as string ||
-                              ''
-                            : ''}
-                        </p>
-                      )}
-                    </div>
-                    <span className="shrink-0 text-xs text-[#9CA3AF]">
-                      {formatRelativeTime(entry.created_at)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Clock className="mb-2 h-8 w-8 text-[#374151]" />
-                <p className="text-sm text-[#9CA3AF]">No recent activity</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Panel toggle tab (visible when panel is closed) */}
+      {!panelOpen && (
+        <button
+          onClick={() => setPanelOpen(true)}
+          className="absolute left-0 top-1/2 z-10 -translate-y-1/2 rounded-r-lg bg-[#0A0E1A]/80 backdrop-blur-md border border-l-0 border-[#374151]/60 px-1.5 py-4 text-[#9CA3AF] shadow-lg transition-colors hover:bg-[#1F2937]/80 hover:text-[#F9FAFB]"
+          title="Open maps panel"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 }
