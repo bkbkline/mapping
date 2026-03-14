@@ -16,10 +16,6 @@ export async function GET(req: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (!profile?.org_id) {
-      return NextResponse.json({ data: null, error: 'No organization found' }, { status: 403 });
-    }
-
     const searchParams = req.nextUrl.searchParams;
     const search = searchParams.get('search');
     const sort = searchParams.get('sort') || 'updated_at';
@@ -33,8 +29,14 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from('maps')
       .select('*', { count: 'exact' })
-      .eq('org_id', profile.org_id)
       .eq('is_archived', archived);
+
+    // Filter by org if user has one, otherwise show user's own maps
+    if (profile?.org_id) {
+      query = query.eq('org_id', profile.org_id);
+    } else {
+      query = query.eq('owner_id', user.id);
+    }
 
     if (search) {
       query = query.ilike('title', `%${search}%`);
@@ -82,10 +84,6 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (!profile?.org_id) {
-      return NextResponse.json({ data: null, error: 'No organization found' }, { status: 403 });
-    }
-
     const body = await req.json();
     const parsed = createMapSchema.safeParse(body);
     if (!parsed.success) {
@@ -99,7 +97,7 @@ export async function POST(req: NextRequest) {
       .from('maps')
       .insert({
         ...parsed.data,
-        org_id: profile.org_id,
+        org_id: profile?.org_id ?? null,
         owner_id: user.id,
       })
       .select()

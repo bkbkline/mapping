@@ -51,8 +51,8 @@ export default function SignupPage() {
     // 2. Create organization record
     if (orgName.trim()) {
       const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
-        .insert({ name: orgName.trim(), owner_id: authData.user.id })
+        .from('orgs')
+        .insert({ name: orgName.trim(), slug: orgName.trim().toLowerCase().replace(/\s+/g, '-') })
         .select('id')
         .single();
 
@@ -63,7 +63,7 @@ export default function SignupPage() {
         // 3. Update user profile with org_id
         const { error: profileError } = await supabase
           .from('profiles')
-          .update({ organization_id: orgData.id })
+          .update({ org_id: orgData.id, role: 'admin' })
           .eq('id', authData.user.id);
 
         if (profileError) {

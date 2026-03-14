@@ -166,6 +166,19 @@ VALUES ('My WMS Layer', 'Infrastructure', '{"type":"wms","url":"https://..."}', 
 | Storage upload fails | Create storage buckets manually in Supabase Dashboard |
 | Google OAuth fails | Set redirect URL to `YOUR_APP_URL/auth/callback` in Supabase |
 
+## Dashboard Structure
+
+The Dashboard (`/app/dashboard`) is the central hub for managing data and monitoring activity. It uses a tabbed layout with four sections:
+
+| Tab | Description |
+|---|---|
+| **Overview** | Stat cards (maps, layers, parcels, activity), quick actions (New Map, Import Layer, Export All), recent activity feed |
+| **Parcels** | Searchable parcel list with APN/address filtering. Click a parcel to open its detail page (`/app/parcels/[id]`) |
+| **Layer Library** | Grid of available layer presets with category filtering and search. Click a layer to view its detail panel inline |
+| **Activity** | Recent activity log across maps, layers, and parcels |
+
+Old standalone routes (`/app/parcels`, `/app/layers`, `/app/collections`) redirect to the Dashboard.
+
 ## Project Structure
 
 ```

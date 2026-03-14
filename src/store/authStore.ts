@@ -19,7 +19,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
   profile: null,
   org: null,
   role: null,
-  loading: true,
+  loading: false,
 
   setSession: (user, profile, org) =>
     set({ user, profile, org, role: profile.role, loading: false }),

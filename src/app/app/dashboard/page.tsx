@@ -411,28 +411,28 @@ export default function DashboardPage() {
 
       {/* Tabbed Layout */}
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-6 border-b border-[#374151] bg-transparent w-full justify-start rounded-none p-0">
+        <TabsList variant="line" className="mb-6 w-full justify-start gap-0 border-b border-[#374151]">
           <TabsTrigger
             value="overview"
-            className="rounded-none border-b-2 border-transparent px-4 py-2 text-[#9CA3AF] data-[state=active]:border-[#F59E0B] data-[state=active]:text-[#F9FAFB] data-[state=active]:bg-transparent"
+            className="rounded-none px-4 py-2.5 text-sm text-[#9CA3AF] hover:text-[#F9FAFB] data-active:text-[#F9FAFB] after:bg-[#F59E0B]"
           >
             Overview
           </TabsTrigger>
           <TabsTrigger
             value="parcels"
-            className="rounded-none border-b-2 border-transparent px-4 py-2 text-[#9CA3AF] data-[state=active]:border-[#F59E0B] data-[state=active]:text-[#F9FAFB] data-[state=active]:bg-transparent"
+            className="rounded-none px-4 py-2.5 text-sm text-[#9CA3AF] hover:text-[#F9FAFB] data-active:text-[#F9FAFB] after:bg-[#F59E0B]"
           >
             Parcels
           </TabsTrigger>
           <TabsTrigger
             value="layers"
-            className="rounded-none border-b-2 border-transparent px-4 py-2 text-[#9CA3AF] data-[state=active]:border-[#F59E0B] data-[state=active]:text-[#F9FAFB] data-[state=active]:bg-transparent"
+            className="rounded-none px-4 py-2.5 text-sm text-[#9CA3AF] hover:text-[#F9FAFB] data-active:text-[#F9FAFB] after:bg-[#F59E0B]"
           >
             Layer Library
           </TabsTrigger>
           <TabsTrigger
             value="activity"
-            className="rounded-none border-b-2 border-transparent px-4 py-2 text-[#9CA3AF] data-[state=active]:border-[#F59E0B] data-[state=active]:text-[#F9FAFB] data-[state=active]:bg-transparent"
+            className="rounded-none px-4 py-2.5 text-sm text-[#9CA3AF] hover:text-[#F9FAFB] data-active:text-[#F9FAFB] after:bg-[#F59E0B]"
           >
             Activity
           </TabsTrigger>
@@ -444,7 +444,7 @@ export default function DashboardPage() {
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {statCards.map((stat) => (
               <Card key={stat.label} className="border-[#374151] bg-[#1F2937]">
-                <CardContent className="flex items-center gap-4 pt-0">
+                <CardContent className="flex items-center gap-4 p-4">
                   <div className={`rounded-lg bg-[#111827] p-3 ${stat.color}`}>
                     <stat.icon className="h-5 w-5" />
                   </div>
@@ -729,9 +729,9 @@ export default function DashboardPage() {
 
         {/* ────────────────────── LAYERS TAB ──────────────────────── */}
         <TabsContent value="layers">
-          <div className="flex">
+          <div className="flex gap-0">
             {/* Main content */}
-            <div className={`flex-1 transition-all ${detailPanelOpen ? 'mr-96' : ''}`}>
+            <div className="flex-1 min-w-0">
               {/* Header */}
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-2xl font-semibold text-[#F9FAFB]">Layer Library</h2>
@@ -777,7 +777,7 @@ export default function DashboardPage() {
                   <p className="text-[#9CA3AF]">No layers found in this category.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${detailPanelOpen ? 'lg:grid-cols-2' : 'lg:grid-cols-3 xl:grid-cols-4'}`}>
                   {filteredLayers.map((layer) => (
                     <Card
                       key={layer.id}
@@ -852,9 +852,9 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Detail Panel (inline slide-out within tab) */}
+            {/* Detail Panel */}
             {detailPanelOpen && selectedLayer && (
-              <div className="w-96 shrink-0 border-l border-[#374151] bg-[#1F2937] overflow-y-auto">
+              <div className="w-80 lg:w-96 shrink-0 border-l border-[#374151] bg-[#1F2937] overflow-y-auto rounded-r-xl max-h-[calc(100vh-220px)]">
                 <div className="p-6">
                   {/* Panel header */}
                   <div className="mb-6 flex items-center justify-between">

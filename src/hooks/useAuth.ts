@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/store/authStore';
@@ -9,37 +9,50 @@ export function useAuth() {
   const router = useRouter();
   const { user, profile, org, role, loading, setSession, clearSession, setLoading } = useAuthStore();
   const supabase = createClient();
+  const initialized = useRef(false);
 
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
     const getSession = async () => {
       setLoading(true);
-      try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', authUser.id)
-            .single();
 
-          let orgData = null;
-          if (profileData?.org_id) {
-            const { data } = await supabase
-              .from('orgs')
-              .select('*')
-              .eq('id', profileData.org_id)
-              .single();
-            orgData = data;
-          }
-          if (profileData) {
-            setSession(authUser, profileData, orgData);
-          } else {
-            // Profile not found (RLS or not yet created) — still stop loading
-            setLoading(false);
-          }
-        } else {
+      try {
+        // Use getSession (reads cookies locally, no network call) instead of
+        // getUser (network request that can hang/timeout)
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (!session?.user || sessionError) {
           clearSession();
+          return;
         }
+
+        const authUser = session.user;
+
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authUser.id)
+          .single();
+
+        if (!profileData) {
+          // User exists in auth but no profile row yet — still let the app render
+          setLoading(false);
+          return;
+        }
+
+        let orgData = null;
+        if (profileData.org_id) {
+          const { data } = await supabase
+            .from('orgs')
+            .select('*')
+            .eq('id', profileData.org_id)
+            .single();
+          orgData = data;
+        }
+
+        setSession(authUser, profileData, orgData);
       } catch {
         clearSession();
       }
@@ -71,13 +84,16 @@ export function useAuth() {
           }
           if (profileData) {
             setSession(session.user, profileData, orgData);
+          } else {
+            setLoading(false);
           }
         }
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase, setSession, clearSession, setLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
