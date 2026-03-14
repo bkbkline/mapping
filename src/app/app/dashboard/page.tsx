@@ -22,6 +22,10 @@ import {
   Share2,
   Edit,
   Eye,
+  User,
+  File,
+  Bell,
+  BellOff,
 } from 'lucide-react';
 import type { MapRecord } from '@/types';
 
@@ -118,6 +122,13 @@ export default function DashboardPage() {
   const [recentMaps, setRecentMaps] = useState<MapRecord[]>([]);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  const placeholderFiles = [
+    { name: 'downtown_parcels.geojson', size: '2.4 MB', date: '2 hours ago' },
+    { name: 'zoning_overlay.kml', size: '1.1 MB', date: '1 day ago' },
+    { name: 'site_boundaries.shp', size: '4.7 MB', date: '3 days ago' },
+  ];
 
   const firstName = profile?.full_name?.split(' ')[0] || 'there';
 
@@ -302,6 +313,97 @@ export default function DashboardPage() {
             </Button>
           </Link>
         </div>
+      </div>
+
+      {/* File Management */}
+      <div className="mb-8">
+        <h2 className="mb-4 text-lg font-semibold text-[#F9FAFB]">File Management</h2>
+        <Card className="border-[#374151] bg-[#1F2937]">
+          <CardContent>
+            <div className="mb-6 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[#374151] bg-[#111827] px-6 py-10 text-center transition-colors hover:border-[#F59E0B]/40">
+              <Upload className="mb-3 h-8 w-8 text-[#9CA3AF]" />
+              <p className="text-sm font-medium text-[#F9FAFB]">Upload GeoJSON, KML, or Shapefile</p>
+              <p className="mt-1 text-xs text-[#9CA3AF]">Drag and drop files here, or click to browse</p>
+              <Button className="mt-4 bg-[#F59E0B] text-[#0A0E1A] hover:bg-[#F59E0B]/90">
+                <Upload className="h-4 w-4" />
+                Choose Files
+              </Button>
+            </div>
+            <div>
+              <h3 className="mb-3 text-sm font-medium text-[#9CA3AF]">Recently Uploaded</h3>
+              <div className="divide-y divide-[#374151]">
+                {placeholderFiles.map((file) => (
+                  <div key={file.name} className="flex items-center gap-3 py-3">
+                    <div className="rounded-lg bg-[#111827] p-2">
+                      <File className="h-4 w-4 text-[#F59E0B]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[#F9FAFB] truncate">{file.name}</p>
+                      <p className="text-xs text-[#9CA3AF]">{file.size}</p>
+                    </div>
+                    <span className="shrink-0 text-xs text-[#9CA3AF]">{file.date}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Your Profile */}
+      <div className="mb-8">
+        <h2 className="mb-4 text-lg font-semibold text-[#F9FAFB]">Your Profile</h2>
+        <Card className="border-[#374151] bg-[#1F2937]">
+          <CardContent>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F59E0B]/20 text-[#F59E0B]">
+                  {profile?.full_name ? (
+                    <span className="text-lg font-semibold">
+                      {profile.full_name
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                        .toUpperCase()
+                        .slice(0, 2)}
+                    </span>
+                  ) : (
+                    <User className="h-6 w-6" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-[#F9FAFB]">
+                    {profile?.full_name || 'Unknown User'}
+                  </p>
+                  <p className="text-xs text-[#9CA3AF]">{profile?.email || 'No email'}</p>
+                  <Badge className="mt-1 bg-[#F59E0B]/20 text-[#F59E0B] border-[#F59E0B]/30 text-[10px]">
+                    {profile?.role || 'Member'}
+                  </Badge>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                  className="flex items-center gap-2 rounded-lg border border-[#374151] bg-[#111827] px-3 py-2 text-xs text-[#9CA3AF] transition-colors hover:border-[#F59E0B]/40 hover:text-[#F9FAFB]"
+                >
+                  {notificationsEnabled ? (
+                    <Bell className="h-4 w-4 text-[#F59E0B]" />
+                  ) : (
+                    <BellOff className="h-4 w-4 text-[#9CA3AF]" />
+                  )}
+                  {notificationsEnabled ? 'Notifications On' : 'Notifications Off'}
+                </button>
+                <Link href="/app/settings">
+                  <Button variant="outline" className="border-[#374151] bg-[#111827] text-[#F9FAFB] hover:border-[#F59E0B]/40 hover:bg-[#1F2937]">
+                    <Edit className="h-4 w-4" />
+                    Edit Profile
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Recent Activity */}

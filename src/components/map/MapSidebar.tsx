@@ -10,27 +10,26 @@ interface MapSidebarProps {
   onToggle: () => void;
   activeMap: MapRecord | null;
   onSelectMap: (map: MapRecord) => void;
-  mapInstance: mapboxgl.Map | null;
   onStyleChange: (style: string) => void;
+  onOverlayToggle?: (overlayId: string, enabled: boolean) => void;
 }
 
 const basemaps = [
-  { id: 'satellite-streets-v12', label: 'Satellite', icon: '🛰️' },
-  { id: 'streets-v12', label: 'Streets', icon: '🗺️' },
-  { id: 'outdoors-v12', label: 'Outdoors', icon: '🏔️' },
-  { id: 'light-v11', label: 'Light', icon: '☀️' },
+  { id: 'satellite-streets-v12', label: 'Satellite', icon: '\u{1F6F0}\uFE0F' },
+  { id: 'streets-v12', label: 'Streets', icon: '\u{1F5FA}\uFE0F' },
+  { id: 'outdoors-v12', label: 'Outdoors', icon: '\u{1F3D4}\uFE0F' },
+  { id: 'light-v11', label: 'Light', icon: '\u2600\uFE0F' },
 ];
 
 const overlays = [
-  { id: 'contours', label: 'Contour Lines', icon: '🏔️', available: false },
-  { id: 'counties', label: 'County Lines', icon: '🗺️', available: false },
-  { id: 'floodplains', label: 'Floodplains', icon: '🌊', available: false },
-  { id: 'public-lands', label: 'Public Lands', icon: '🌲', available: false },
-  { id: 'schools', label: 'School Districts', icon: '🏫', available: false },
+  { id: 'contours', label: 'Contour Lines', icon: '\u{1F3D4}\uFE0F', available: true },
+  { id: 'counties', label: 'County Lines', icon: '\u{1F5FA}\uFE0F', available: true },
+  { id: 'floodplains', label: 'Floodplains', icon: '\u{1F30A}', available: false },
+  { id: 'public-lands', label: 'Public Lands', icon: '\u{1F332}', available: false },
+  { id: 'schools', label: 'School Districts', icon: '\u{1F3EB}', available: false },
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function MapSidebar({ open, onToggle, activeMap, onSelectMap, mapInstance, onStyleChange }: MapSidebarProps) {
+export default function MapSidebar({ open, onToggle, activeMap, onSelectMap, onStyleChange, onOverlayToggle }: MapSidebarProps) {
   const supabase = createClient();
   useAuth();
   const [maps, setMaps] = useState<MapRecord[]>([]);
@@ -87,6 +86,16 @@ export default function MapSidebar({ open, onToggle, activeMap, onSelectMap, map
   function handleBasemapChange(id: string) {
     setActiveBasemap(id);
     onStyleChange(id);
+  }
+
+  function handleOverlayChange(overlayId: string) {
+    const willBeEnabled = !activeOverlays.has(overlayId);
+    setActiveOverlays((prev) => {
+      const next = new Set(prev);
+      if (next.has(overlayId)) next.delete(overlayId); else next.add(overlayId);
+      return next;
+    });
+    onOverlayToggle?.(overlayId, willBeEnabled);
   }
 
   const panelStyle: React.CSSProperties = {
@@ -151,7 +160,7 @@ export default function MapSidebar({ open, onToggle, activeMap, onSelectMap, map
               <button
                 onClick={() => { setShowNewMap(false); setNewMapName(''); }}
                 style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 16 }}
-              >×</button>
+              >\u00D7</button>
             </div>
           )}
 
@@ -178,7 +187,7 @@ export default function MapSidebar({ open, onToggle, activeMap, onSelectMap, map
                   onMouseEnter={(e) => { if (activeMap?.id !== m.id) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
                   onMouseLeave={(e) => { if (activeMap?.id !== m.id) e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <span style={{ fontSize: 16 }}>🗺️</span>
+                  <span style={{ fontSize: 16 }}>{'\u{1F5FA}\uFE0F'}</span>
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
                 </button>
               ))
@@ -218,7 +227,8 @@ export default function MapSidebar({ open, onToggle, activeMap, onSelectMap, map
                 key={o.id}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '6px 8px', borderRadius: 6, cursor: 'pointer',
+                  padding: '6px 8px', borderRadius: 6,
+                  cursor: o.available ? 'pointer' : 'default',
                   color: '#fff', fontSize: 13,
                   opacity: o.available ? 1 : 0.6,
                 }}
@@ -226,13 +236,8 @@ export default function MapSidebar({ open, onToggle, activeMap, onSelectMap, map
                 <input
                   type="checkbox"
                   checked={activeOverlays.has(o.id)}
-                  onChange={() => {
-                    setActiveOverlays((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(o.id)) next.delete(o.id); else next.add(o.id);
-                      return next;
-                    });
-                  }}
+                  disabled={!o.available}
+                  onChange={() => handleOverlayChange(o.id)}
                   style={{ accentColor: '#3b82f6' }}
                 />
                 <span>{o.icon}</span>
@@ -253,7 +258,7 @@ export default function MapSidebar({ open, onToggle, activeMap, onSelectMap, map
           position: 'absolute', left: open ? 320 : 0, top: '50%', transform: 'translateY(-50%)',
           zIndex: 16, background: 'rgba(15, 20, 40, 0.92)', backdropFilter: 'blur(12px)',
           border: '1px solid rgba(55, 65, 81, 0.5)', borderLeft: open ? 'none' : '1px solid rgba(55, 65, 81, 0.5)',
-          borderRadius: open ? '0 8px 8px 0' : '0 8px 8px 0',
+          borderRadius: '0 8px 8px 0',
           padding: '12px 6px', cursor: 'pointer', color: '#94a3b8',
           transition: 'left 0.3s ease',
           boxShadow: '4px 0 16px rgba(0,0,0,0.3)',

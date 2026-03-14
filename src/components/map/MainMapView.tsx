@@ -2,26 +2,33 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { env } from '@/lib/env';
 import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { useMapStore } from '@/store/mapStore';
 import MapSidebar from './MapSidebar';
-import MapToolbar from './MapToolbar';
 import MapStatusBar from './MapStatusBar';
-import type { MapRecord } from '@/types';
+import type { MapRecord, GeometryType } from '@/types';
+
+import dynamic from 'next/dynamic';
+const DrawToolbar = dynamic(() => import('./DrawToolbar'), { ssr: false, loading: () => null });
+const FeatureInspector = dynamic(() => import('./FeatureInspector'), { ssr: false, loading: () => null });
+const FeaturePropertiesPanel = dynamic(() => import('./FeaturePropertiesPanel'), { ssr: false, loading: () => null });
 
 export default function MainMapView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
-  const [, setMapReady] = useState(false);
+  const drawRef = useRef<MapboxDraw | null>(null);
   const [coordinates, setCoordinates] = useState({ lng: -98.5, lat: 39.8, zoom: 4 });
   const [activeMapRecord, setActiveMapRecord] = useState<MapRecord | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [terrain3D, setTerrain3D] = useState(false);
+  const [drawnGeometry, setDrawnGeometry] = useState<GeoJSON.Geometry | null>(null);
+  const [drawnGeometryType, setDrawnGeometryType] = useState<GeometryType | null>(null);
   const supabase = createClient();
-  useAuth();
-  const { setMapLoaded, setViewport, setBasemap } = useMapStore();
+  const { setMapLoaded, setViewport, setBasemap, activeTool, setActiveTool, selectFeature } = useMapStore();
 
   // Initialize map
   useEffect(() => {
@@ -38,14 +45,36 @@ export default function MainMapView() {
       preserveDrawingBuffer: true,
     });
 
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'bottom-right');
+    // Controls
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right');
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-left');
     map.addControl(new mapboxgl.ScaleControl({ maxWidth: 150, unit: 'imperial' }), 'bottom-left');
+    map.addControl(new mapboxgl.GeolocateControl({
+      positionOptions: { enableHighAccuracy: true },
+      trackUserLocation: true,
+      showUserHeading: true,
+    }), 'top-right');
+
+    // Mapbox Draw
+    const draw = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: {},
+      defaultMode: 'simple_select',
+    });
+    map.addControl(draw as unknown as mapboxgl.IControl);
+    drawRef.current = draw;
 
     map.on('load', () => {
-      setMapReady(true);
       setMapLoaded(true);
       setBasemap('satellite-streets-v12');
+
+      // Add terrain source for 3D toggle
+      map.addSource('mapbox-dem', {
+        type: 'raster-dem',
+        url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+        tileSize: 512,
+        maxzoom: 14,
+      });
     });
 
     map.on('mousemove', (e) => {
@@ -73,16 +102,112 @@ export default function MainMapView() {
       });
     });
 
+    // Draw events
+    map.on('draw.create', (e: { features: GeoJSON.Feature[] }) => {
+      if (e.features.length > 0) {
+        const feature = e.features[0];
+        const geom = feature.geometry;
+        let geomType: GeometryType = 'Point';
+        if (geom.type === 'Polygon') geomType = 'Polygon';
+        else if (geom.type === 'LineString') geomType = 'LineString';
+        setDrawnGeometry(geom);
+        setDrawnGeometryType(geomType);
+      }
+    });
+
+    map.on('draw.selectionchange', (e: { features: GeoJSON.Feature[] }) => {
+      if (e.features.length > 0) {
+        const fid = e.features[0].id as string;
+        selectFeature(fid, 'annotation');
+      }
+    });
+
+    // Click handler for parcel inspection (only in pan mode)
+    map.on('click', async (e) => {
+      const currentTool = useMapStore.getState().activeTool;
+      if (currentTool !== 'pan') return;
+
+      try {
+        const supabaseClient = createClient();
+        const point = e.lngLat;
+        const { data: nearbyParcels } = await supabaseClient.rpc('find_parcels_at_point', {
+          lng: point.lng,
+          lat: point.lat,
+        });
+        if (nearbyParcels && nearbyParcels.length > 0) {
+          selectFeature(nearbyParcels[0].id, 'parcel');
+        }
+      } catch {
+        // Parcel click inspection is best-effort
+      }
+    });
+
     mapRef.current = map;
 
     return () => {
       map.remove();
       mapRef.current = null;
-      setMapReady(false);
+      drawRef.current = null;
       setMapLoaded(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sync draw tool with store activeTool
+  useEffect(() => {
+    const draw = drawRef.current;
+    if (!draw) return;
+
+    const drawModeMap: Record<string, string> = {
+      pan: 'simple_select',
+      point: 'draw_point',
+      line: 'draw_line_string',
+      polygon: 'draw_polygon',
+      rectangle: 'draw_polygon',
+      circle: 'draw_polygon',
+    };
+
+    const mode = drawModeMap[activeTool];
+    if (mode) {
+      try {
+        draw.changeMode(mode as string);
+      } catch {
+        // Mode change can fail if draw isn't ready
+      }
+    }
+  }, [activeTool]);
+
+  // Keyboard shortcut: Escape resets to pan
+  // (All other shortcuts are handled by DrawToolbar's built-in keyboard handler)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if (e.key === 'Escape') {
+        setActiveTool('pan');
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setActiveTool]);
+
+  // 3D terrain toggle
+  const toggle3D = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (terrain3D) {
+      map.setTerrain(null);
+      map.easeTo({ pitch: 0 });
+      setTerrain3D(false);
+    } else {
+      map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+      map.easeTo({ pitch: 60 });
+      setTerrain3D(true);
+    }
+  }, [terrain3D]);
 
   const flyTo = useCallback((lng: number, lat: number, zoom: number) => {
     mapRef.current?.flyTo({ center: [lng, lat], zoom, duration: 2000 });
@@ -93,14 +218,99 @@ export default function MainMapView() {
     if (!map) return;
     map.setStyle(`mapbox://styles/mapbox/${styleId}`);
     setBasemap(styleId);
-  }, [setBasemap]);
+
+    // Re-add terrain source after style change
+    map.once('style.load', () => {
+      if (!map.getSource('mapbox-dem')) {
+        map.addSource('mapbox-dem', {
+          type: 'raster-dem',
+          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512,
+          maxzoom: 14,
+        });
+      }
+      if (terrain3D) {
+        map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+      }
+    });
+  }, [setBasemap, terrain3D]);
 
   const handleSelectMap = useCallback((rec: MapRecord) => {
     setActiveMapRecord(rec);
     flyTo(rec.center_lng, rec.center_lat, rec.zoom);
   }, [flyTo]);
 
-  // Search bar
+  // Handle overlay toggles from sidebar
+  const handleOverlayToggle = useCallback((overlayId: string, enabled: boolean) => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (overlayId === 'contours') {
+      if (enabled) {
+        if (!map.getSource('contours-source')) {
+          map.addSource('contours-source', {
+            type: 'vector',
+            url: 'mapbox://mapbox.mapbox-terrain-v2',
+          });
+        }
+        if (!map.getLayer('contour-lines')) {
+          map.addLayer({
+            id: 'contour-lines',
+            type: 'line',
+            source: 'contours-source',
+            'source-layer': 'contour',
+            paint: {
+              'line-color': '#f0e68c',
+              'line-width': ['match', ['get', 'index'], 5, 1.5, 10, 2, 0.8],
+              'line-opacity': 0.5,
+            },
+          });
+        }
+      } else {
+        if (map.getLayer('contour-lines')) map.removeLayer('contour-lines');
+      }
+    }
+
+    if (overlayId === 'counties') {
+      if (enabled) {
+        if (!map.getSource('counties-source')) {
+          map.addSource('counties-source', {
+            type: 'vector',
+            url: 'mapbox://mapbox.boundaries-adm2-v4',
+          });
+        }
+        if (!map.getLayer('county-lines')) {
+          map.addLayer({
+            id: 'county-lines',
+            type: 'line',
+            source: 'counties-source',
+            'source-layer': 'boundaries_admin_2',
+            paint: {
+              'line-color': '#ff6b6b',
+              'line-width': 1.5,
+              'line-opacity': 0.6,
+              'line-dasharray': [3, 2],
+            },
+          });
+        }
+      } else {
+        if (map.getLayer('county-lines')) map.removeLayer('county-lines');
+      }
+    }
+  }, []);
+
+  // Handle drawn feature completion (save/discard)
+  const handleDrawComplete = useCallback(() => {
+    setDrawnGeometry(null);
+    setDrawnGeometryType(null);
+    setActiveTool('pan');
+    const draw = drawRef.current;
+    if (draw) {
+      draw.deleteAll();
+    }
+  }, [setActiveTool]);
+
+  // Search bar state
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Array<{ id: string; text: string; type: string; center?: [number, number] }>>([]);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -113,8 +323,6 @@ export default function MainMapView() {
 
     searchTimerRef.current = setTimeout(async () => {
       const results: typeof searchResults = [];
-
-      // Geocode
       try {
         const res = await fetch(
           `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${env.MAPBOX_TOKEN}&autocomplete=true&limit=3`
@@ -127,11 +335,10 @@ export default function MainMapView() {
         }
       } catch { /* ignore */ }
 
-      // Parcel search
       try {
         const { data: parcels } = await supabase
           .from('parcels')
-          .select('id, apn, situs_address, owner_name, geometry')
+          .select('id, apn, situs_address, owner_name')
           .or(`apn.ilike.%${query}%,situs_address.ilike.%${query}%,owner_name.ilike.%${query}%`)
           .limit(3);
         if (parcels) {
@@ -219,7 +426,7 @@ export default function MainMapView() {
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
                   <span style={{ fontSize: 16 }}>
-                    {r.type === 'address' ? '📍' : r.type === 'parcel' ? '🏘️' : '👤'}
+                    {r.type === 'address' ? '\u{1F4CD}' : r.type === 'parcel' ? '\u{1F3D8}\uFE0F' : '\u{1F464}'}
                   </span>
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.text}</span>
                   <span style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase' }}>{r.type}</span>
@@ -230,17 +437,34 @@ export default function MainMapView() {
         </div>
       </div>
 
+      {/* 3D terrain toggle - top right */}
+      <button
+        onClick={toggle3D}
+        title={terrain3D ? 'Switch to 2D' : 'Switch to 3D'}
+        style={{
+          position: 'absolute', top: 180, right: 16, zIndex: 10,
+          width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(15, 20, 40, 0.92)', backdropFilter: 'blur(12px)',
+          borderRadius: 8, border: terrain3D ? '2px solid #3b82f6' : '1px solid rgba(55, 65, 81, 0.5)',
+          cursor: 'pointer', color: terrain3D ? '#3b82f6' : '#94a3b8',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+          fontSize: 13, fontWeight: 700, fontFamily: 'monospace',
+        }}
+      >
+        {terrain3D ? '3D' : '2D'}
+      </button>
+
       {/* Left sidebar */}
       <MapSidebar
         open={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
         activeMap={activeMapRecord}
         onSelectMap={handleSelectMap}
-        mapInstance={mapRef.current}
         onStyleChange={setStyle}
+        onOverlayToggle={handleOverlayToggle}
       />
 
-      {/* Active map badge - top left below sidebar toggle area */}
+      {/* Active map badge */}
       {activeMapRecord && (
         <div style={{
           position: 'absolute', top: 16, left: sidebarOpen ? 336 : 56, zIndex: 10,
@@ -255,8 +479,18 @@ export default function MainMapView() {
         </div>
       )}
 
-      {/* Drawing toolbar - left center */}
-      <MapToolbar />
+      {/* Drawing toolbar - left center (rich DrawToolbar with industrial tools) */}
+      <DrawToolbar />
+
+      {/* Feature Inspector - right slide panel */}
+      <FeatureInspector />
+
+      {/* Feature Properties Panel - appears after drawing */}
+      <FeaturePropertiesPanel
+        geometry={drawnGeometry}
+        geometryType={drawnGeometryType}
+        onComplete={handleDrawComplete}
+      />
 
       {/* Status bar - bottom */}
       <MapStatusBar coordinates={coordinates} />
