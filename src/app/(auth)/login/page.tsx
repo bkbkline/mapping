@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/app/dashboard';
+  const redirectTo = searchParams.get('redirect') || '/app/map';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,6 +40,7 @@ export default function LoginPage() {
     }
 
     router.push(redirectTo);
+    router.refresh();
   }
 
   async function handleMagicLink(e: React.FormEvent) {

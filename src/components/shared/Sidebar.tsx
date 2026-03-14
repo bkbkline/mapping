@@ -3,6 +3,7 @@
 import {
   LayoutDashboard,
   Map,
+  Compass,
   FolderOpen,
   Building2,
   Layers,
@@ -18,6 +19,7 @@ import { useUIStore } from '@/store/uiStore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const navItems = [
+  { label: 'Map', href: '/app/map', icon: Compass },
   { label: 'Dashboard', href: '/app/dashboard', icon: LayoutDashboard },
   { label: 'Maps', href: '/app/maps', icon: Map },
   { label: 'Collections', href: '/app/collections', icon: FolderOpen },
