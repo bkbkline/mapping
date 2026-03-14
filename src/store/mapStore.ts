@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { DrawTool, MapLayer, Annotation, MapViewport } from '@/types';
+import type { DrawTool, DrawingMode, MapLayer, Annotation, MapViewport } from '@/types';
 
 interface UndoAction {
   type: string;
@@ -19,6 +19,9 @@ interface MapStore {
   undoStack: UndoAction[];
   redoStack: UndoAction[];
   basemap: string;
+  selectedParcelIds: string[];
+  hoveredParcelId: string | null;
+  drawingMode: DrawingMode;
 
   setActiveMapId: (id: string | null) => void;
   setMapLoaded: (loaded: boolean) => void;
@@ -40,6 +43,10 @@ interface MapStore {
   redo: () => void;
   selectFeature: (id: string | null, type: 'annotation' | 'parcel' | 'layer_feature' | null) => void;
   clearSelection: () => void;
+  setSelectedParcelIds: (ids: string[]) => void;
+  toggleParcelSelection: (id: string) => void;
+  setHoveredParcelId: (id: string | null) => void;
+  setDrawingMode: (mode: DrawingMode) => void;
 }
 
 const MAX_UNDO = 20;
@@ -56,6 +63,9 @@ export const useMapStore = create<MapStore>((set) => ({
   undoStack: [],
   redoStack: [],
   basemap: 'satellite-streets-v12',
+  selectedParcelIds: [],
+  hoveredParcelId: null,
+  drawingMode: null,
 
   setActiveMapId: (id) => set({ activeMapId: id }),
   setMapLoaded: (loaded) => set({ mapLoaded: loaded }),
@@ -144,4 +154,12 @@ export const useMapStore = create<MapStore>((set) => ({
 
   selectFeature: (id, type) => set({ selectedFeatureId: id, selectedFeatureType: type }),
   clearSelection: () => set({ selectedFeatureId: null, selectedFeatureType: null }),
+  setSelectedParcelIds: (ids) => set({ selectedParcelIds: ids }),
+  toggleParcelSelection: (id) => set((state) => ({
+    selectedParcelIds: state.selectedParcelIds.includes(id)
+      ? state.selectedParcelIds.filter((pid) => pid !== id)
+      : [...state.selectedParcelIds, id],
+  })),
+  setHoveredParcelId: (id) => set({ hoveredParcelId: id }),
+  setDrawingMode: (mode) => set({ drawingMode: mode }),
 }));

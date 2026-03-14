@@ -1,217 +1,154 @@
 # Land Intel Platform
 
-Map-based land intelligence platform for industrial real estate professionals. Site selection, underwriting, and market analysis in a single GIS interface.
+Industrial real estate intelligence tool built as a single-page, three-panel map-centric application.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Vercel (Frontend)                     │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐  │
-│  │ Next.js  │ │ Mapbox   │ │ Zustand  │ │ TanStack  │  │
-│  │ App      │ │ GL JS    │ │ Store    │ │ Query     │  │
-│  │ Router   │ │ v3       │ │          │ │           │  │
-│  └────┬─────┘ └────┬─────┘ └──────────┘ └─────┬─────┘  │
-│       │             │                          │        │
-│  ┌────┴─────────────┴──────────────────────────┴─────┐  │
-│  │              API Routes (/api/*)                   │  │
-│  └────────────────────┬──────────────────────────────┘  │
-└───────────────────────┼─────────────────────────────────┘
-                        │
-┌───────────────────────┼─────────────────────────────────┐
-│                  Supabase (Backend)                      │
-│  ┌────────┐ ┌────────┐ ┌────────┐ ┌─────────────────┐  │
-│  │Postgres│ │ Auth   │ │Storage │ │ Edge Functions   │  │
-│  │+PostGIS│ │        │ │        │ │ (Deno)           │  │
-│  │+ RLS   │ │        │ │        │ │                  │  │
-│  └────────┘ └────────┘ └────────┘ └─────────────────┘  │
-└─────────────────────────────────────────────────────────┘
++----------------+---------------------------+----------------+
+|  Left Panel    |     Center: Map           |  Right Panel   |
+|  (320px)       |     Mapbox GL JS          |  (380px)       |
+|                |                           |  (conditional) |
+|  - Search      |  Floating toolbar         |                |
+|  - Filters     |  Hover tooltips           |  - Parcel      |
+|  - Layers      |  Click -> right panel     |  - Comps       |
+|  - Projects    |  Draw/measure tools       |  - Notes       |
+|  - Saved       |                           |  - Tags        |
+|                |                           |  - Feasibility |
+|  Collapsible   |                           |  - Zoning      |
++----------------+---------------------------+----------------+
 ```
 
-## Features
-
-- **Map Workspace** — Full Mapbox GL JS map with drawing tools, layer management, basemap switching
-- **Layer System** — Upload GeoJSON/KML/Shapefile/CSV, connect WMS/WMTS/XYZ tile services, preset layer library (managed in Dashboard)
-- **Draw & Annotate** — Polygon, rectangle, circle, line, point tools with measurements
-- **Parcel Intelligence** — Parcel search by APN/address, zoning lookup, constraint detection (accessed via Dashboard)
-- **Industrial Scorecard** — Clear height, dock doors, truck court, rail access, and more
-- **Feasibility Calculator** — Full development underwriting with NOI, cap rate, DSCR analysis
-- **Drive Time Analysis** — Mapbox Isochrone API for 30/60/90 min drive time polygons
-- **Constraint Mapping** — FEMA flood, wetlands, EPA superfund overlay with PostGIS intersection
-- **Site Planning Tools** — Setback buffer, parking calculator, truck court depth, building area
-- **Collaboration** — Real-time presence, cursor sharing, annotation sync
-- **Export** — PDF maps, CSV/Excel data exports, GeoJSON/KML layer exports
+Single route: `/app` -- everything lives in the three-panel shell.
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js 14 (App Router) + TypeScript + Tailwind CSS |
-| Mapping | Mapbox GL JS v3 |
-| Backend/DB | Supabase (Postgres + PostGIS + Auth + Storage + Realtime) |
-| Deployment | Vercel (frontend) + Supabase (backend) |
-| State | Zustand + TanStack Query |
-| UI | shadcn/ui + Radix UI |
+- **Framework**: Next.js 14 (App Router)
+- **Map**: Mapbox GL JS 3.20
+- **Database**: Supabase (PostgreSQL + PostGIS + RLS)
+- **State**: Zustand
+- **Data Fetching**: TanStack React Query
+- **UI**: shadcn/ui + Tailwind CSS
+- **Geospatial**: Turf.js
+- **Auth**: Supabase Auth
 
-## Local Development Setup
+## Setup
 
 ### Prerequisites
 
 - Node.js 18+
-- npm 9+
-- Supabase account
-- Mapbox account
+- Supabase project (with PostGIS extension)
+- Mapbox account with access token
 
-### 1. Clone and Install
+### Environment Variables
+
+Create `.env.local`:
+
+```env
+NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_token
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+### Install & Run
 
 ```bash
-git clone <repo-url>
-cd land-intel
 npm install
-```
-
-### 2. Environment Variables
-
-```bash
-cp .env.example .env.local
-```
-
-Edit `.env.local` with your credentials. See [CREDENTIALS.md](./CREDENTIALS.md) for where to find each value.
-
-### 3. Supabase Setup
-
-1. Create a new Supabase project at [supabase.com](https://supabase.com)
-2. Run migrations in order via the SQL Editor:
-   - `supabase/migrations/001_extensions.sql`
-   - `supabase/migrations/002_core_tables.sql`
-   - `supabase/migrations/003_indexes.sql`
-   - `supabase/migrations/004_rls.sql`
-   - `supabase/migrations/005_triggers.sql`
-   - `supabase/migrations/006_storage.sql`
-3. Create storage buckets: `layer-files`, `export-files`, `map-thumbnails`, `org-assets`
-4. Enable Google OAuth in Authentication > Providers (optional)
-
-### 4. Mapbox Setup
-
-1. Create a token at [mapbox.com/account/access-tokens](https://account.mapbox.com/access-tokens/)
-2. Enable scopes: Styles (read), Tilesets (read/list), Geocoding, Isochrone
-3. Set URL restrictions to `localhost:3000` for dev, your Vercel domain for prod
-
-### 5. Run Development Server
-
-```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+### Supabase Setup
 
-### 6. Run Tests
+Run migrations in order:
 
 ```bash
-# Unit tests
-npm run test
-
-# E2E tests
-npx playwright install
-npm run test:e2e
+supabase db push
 ```
 
-## Vercel Deployment
+Migrations cover:
+- `001` - Extensions (PostGIS, uuid-ossp, pg_trgm)
+- `002` - Core tables (orgs, profiles, maps, parcels, collections, etc.)
+- `003` - Indexes (spatial GIST, trigram GIN, B-tree)
+- `004` - Row-Level Security policies
+- `005-006` - Additional schema
+- `007` - Projects and project sites
+- `008` - Comps and listings (with generated price columns)
+- `009` - Reference layers (industrial parks, infrastructure, flood zones, zoning, land use)
+- `010` - Drawings and imported datasets
+- `011` - Tags, notes, saved searches
+- `012` - RLS policies for all new tables
 
-1. Push to GitHub
-2. Import in Vercel Dashboard
-3. Set environment variables in Vercel > Settings > Environment Variables
-4. Deploy
-5. Update `NEXT_PUBLIC_APP_URL` with the deployed URL
-6. Update Mapbox token URL restrictions
-7. Update Supabase Google OAuth redirect URL
-
-## Loading Parcel Data
-
-Parcels are stored in the `parcels` table with PostGIS geometry. To bulk load:
-
-```sql
-INSERT INTO parcels (apn, county, state_abbr, situs_address, owner_name, acreage, zoning, geometry)
-VALUES (
-  '123-456-789',
-  'Los Angeles',
-  'CA',
-  '123 Industrial Blvd',
-  'ABC Logistics LLC',
-  24.3,
-  'M-2',
-  ST_GeomFromGeoJSON('{"type":"MultiPolygon","coordinates":[[...]]}')
-);
-```
-
-Or use the Import Layer feature to upload GeoJSON/Shapefile with parcel data.
-
-## Adding System Layer Presets
-
-Add presets via Settings > Layer Presets, or insert directly:
-
-```sql
-INSERT INTO layer_presets (name, category, layer_config, is_public)
-VALUES ('My WMS Layer', 'Infrastructure', '{"type":"wms","url":"https://..."}', true);
-```
-
-## Troubleshooting
-
-| Issue | Solution |
-|---|---|
-| Map doesn't load | Check `NEXT_PUBLIC_MAPBOX_TOKEN` is set correctly |
-| Auth redirect loop | Verify `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
-| RLS blocks queries | Ensure user has a `profiles` record with `org_id` set |
-| PostGIS functions fail | Run `001_extensions.sql` migration first |
-| Storage upload fails | Create storage buckets manually in Supabase Dashboard |
-| Google OAuth fails | Set redirect URL to `YOUR_APP_URL/auth/callback` in Supabase |
-
-## Dashboard Structure
-
-The Dashboard (`/app/dashboard`) is the central hub for managing data and monitoring activity. It uses a tabbed layout with four sections:
-
-| Tab | Description |
-|---|---|
-| **Overview** | Stat cards (maps, layers, parcels, activity), quick actions (New Map, Import Layer, Export All), recent activity feed |
-| **Parcels** | Searchable parcel list with APN/address filtering. Click a parcel to open its detail page (`/app/parcels/[id]`) |
-| **Layer Library** | Grid of available layer presets with category filtering and search. Click a layer to view its detail panel inline |
-| **Activity** | Recent activity log across maps, layers, and parcels |
-
-Old standalone routes (`/app/parcels`, `/app/layers`, `/app/collections`) redirect to the Dashboard.
-
-## Project Structure
+## Component Tree
 
 ```
-land-intel/
-├── src/
-│   ├── app/                    # Next.js App Router pages
-│   │   ├── (auth)/             # Auth pages (login, signup, reset)
-│   │   ├── api/                # API route handlers
-│   │   ├── app/                # Authenticated app pages
-│   │   │   ├── dashboard/      # Includes Parcels + Layer Library
-│   │   │   ├── map/
-│   │   │   ├── maps/
-│   │   │   ├── parcels/        # Detail view (redirects list to Dashboard)
-│   │   │   ├── exports/
-│   │   │   └── settings/
-│   │   └── auth/callback/
-│   ├── components/
-│   │   ├── map/                # Map workspace components
-│   │   ├── parcels/            # Parcel profile components
-│   │   ├── shared/             # Layout, nav, error boundary
-│   │   └── ui/                 # shadcn/ui components
-│   ├── hooks/                  # Custom React hooks
-│   ├── lib/                    # Utilities, Supabase client, constants
-│   │   ├── calculations/       # Feasibility, measurements
-│   │   ├── parsers/            # Coordinate, GeoJSON parsers
-│   │   └── supabase/           # Supabase client (browser + server)
-│   ├── store/                  # Zustand stores
-│   └── types/                  # TypeScript types and Zod schemas
-├── supabase/
-│   ├── migrations/             # SQL migration files (001-006)
-│   └── functions/              # Edge Functions (Deno)
-├── tests/
-│   ├── unit/                   # Vitest unit tests
-│   └── e2e/                    # Playwright E2E tests
-└── public/
+AppShell
++-- LeftPanel
+|   +-- LeftPanelHeader (section tabs)
+|   +-- SearchSection (geocoder + parcel search)
+|   +-- FilterSection (acreage, zoning, value, owner filters)
+|   +-- LayerSection (layer toggles + opacity)
+|   +-- ProjectSection (project CRUD + site list)
+|   +-- SavedSection (saved searches)
++-- MapCanvas
+|   +-- ParcelLayer (vector parcels with selection)
+|   +-- CompLayer (clustered comp points)
+|   +-- DrawingLayer (user annotations)
+|   +-- MapTooltip (hover info)
+|   +-- MapContextMenu (right-click actions)
++-- MapFloatingToolbar
+|   +-- BasemapSwitcher
+|   +-- DrawTools
+|   +-- MeasureTools
++-- RightPanel
+|   +-- ParcelDetailCard (full parcel info)
+|   +-- ParcelActions (save, note, tag, export)
+|   +-- CompAnalytics (comp stats + list)
+|   +-- NotesPanel (CRUD notes)
+|   +-- TagsPanel (tag management)
+|   +-- FeasibilityPanel (development calculator)
+|   +-- ZoningInfo (zoning detail)
++-- ImportDialog
++-- ExportDialog
 ```
+
+## Features
+
+- **Parcel Search**: Search by APN, address, or owner name with debounced results
+- **Advanced Filters**: Acreage range, zoning codes, assessed value, flood zone, owner, county/state
+- **Layer Management**: Toggle visibility and opacity for system and user layers
+- **Projects**: Create projects, add parcels as sites, track status (prospect/active/under_contract/closed)
+- **Comparable Sales**: View comps by parcel or radius with analytics (avg/median $/SF, $/acre)
+- **Notes & Tags**: Attach notes and color-coded tags to parcels
+- **Feasibility Calculator**: Development pro forma with NOI, return on cost, DSCR
+- **Draw Tools**: Point, line, polygon, rectangle, circle drawing on map
+- **Measure Tools**: Distance, area, and frontage measurement
+- **Import**: CSV, GeoJSON, KML file upload with preview
+- **Export**: CSV, GeoJSON, PNG screenshot, PDF map
+- **Multi-select**: Select multiple parcels on map
+- **Saved Searches**: Save and reload filter configurations
+- **Basemap Switching**: Satellite, Streets, Light, Dark, Outdoors
+
+## Deployment
+
+### Vercel
+
+```bash
+vercel --prod
+```
+
+Set environment variables in Vercel dashboard. The app deploys at `mapping.vercel.app`.
+
+## API Routes
+
+| Endpoint | Methods | Description |
+|----------|---------|-------------|
+| `/api/projects` | GET, POST | List/create projects |
+| `/api/projects/[id]` | GET, PATCH, DELETE | Single project CRUD |
+| `/api/projects/[id]/sites` | GET, POST | Project site management |
+| `/api/comps` | GET | Comps by parcel or radius |
+| `/api/saved-searches` | GET, POST | Saved search management |
+| `/api/notes` | GET, POST | Notes by parcel/project |
+| `/api/tags` | GET, POST | Tag management |
+| `/api/parcels/[id]/tags` | GET, POST, DELETE | Parcel tag associations |
+| `/api/import` | POST | File import (multipart) |

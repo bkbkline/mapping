@@ -307,3 +307,215 @@ export interface SystemLayerConfig {
   category: 'constraint' | 'infrastructure' | 'environmental' | 'reference';
   risk_color?: string;
 }
+
+// === New types for three-panel rebuild ===
+
+export type ProjectStatus = 'active' | 'archived' | 'completed';
+export type ListingStatus = 'active' | 'pending' | 'sold' | 'withdrawn';
+export type LeftPanelSection = 'search' | 'filters' | 'layers' | 'projects' | 'saved';
+export type RightPanelContent = 'parcel' | 'comps' | 'notes' | 'tags' | 'feasibility' | 'zoning' | null;
+export type DrawingMode = 'point' | 'line' | 'polygon' | 'rectangle' | 'circle' | null;
+
+export interface Project {
+  id: string;
+  org_id: string | null;
+  owner_id: string | null;
+  name: string;
+  description: string | null;
+  status: ProjectStatus;
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectSite {
+  id: string;
+  project_id: string;
+  parcel_id: string | null;
+  status: ParcelStatus;
+  notes: string | null;
+  added_by: string | null;
+  created_at: string;
+  updated_at: string;
+  parcel?: Parcel;
+}
+
+export interface Comp {
+  id: string;
+  org_id: string | null;
+  parcel_id: string | null;
+  address: string | null;
+  sale_date: string | null;
+  sale_price: number | null;
+  building_sf: number | null;
+  land_sf: number | null;
+  price_per_sf: number | null;
+  price_per_acre: number | null;
+  buyer: string | null;
+  seller: string | null;
+  zoning: string | null;
+  property_type: string | null;
+  clear_height: number | null;
+  year_built: number | null;
+  notes: string | null;
+  geometry: GeoJSON.Point | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Listing {
+  id: string;
+  org_id: string | null;
+  parcel_id: string | null;
+  address: string | null;
+  asking_price: number | null;
+  building_sf: number | null;
+  land_sf: number | null;
+  price_per_sf: number | null;
+  price_per_acre: number | null;
+  listing_date: string | null;
+  broker: string | null;
+  broker_phone: string | null;
+  broker_email: string | null;
+  property_type: string | null;
+  zoning: string | null;
+  status: ListingStatus;
+  geometry: GeoJSON.Point | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IndustrialPark {
+  id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  total_acres: number | null;
+  available_acres: number | null;
+  features: string[];
+  geometry: GeoJSON.MultiPolygon | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InfrastructureAsset {
+  id: string;
+  asset_type: 'freeway' | 'rail' | 'port' | 'airport' | 'utility' | 'pipeline';
+  name: string;
+  description: string | null;
+  geometry: GeoJSON.Geometry | null;
+  properties: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface FloodZone {
+  id: string;
+  zone_code: string;
+  zone_description: string | null;
+  source: string | null;
+  effective_date: string | null;
+  geometry: GeoJSON.MultiPolygon | null;
+  created_at: string;
+}
+
+export interface ZoningDistrict {
+  id: string;
+  jurisdiction: string;
+  zone_code: string;
+  zone_name: string | null;
+  description: string | null;
+  permitted_uses: string[];
+  max_far: number | null;
+  max_height: number | null;
+  max_lot_coverage: number | null;
+  geometry: GeoJSON.MultiPolygon | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LandUse {
+  id: string;
+  land_use_code: string;
+  land_use_description: string | null;
+  category: string | null;
+  geometry: GeoJSON.MultiPolygon | null;
+  source: string | null;
+  created_at: string;
+}
+
+export interface Drawing {
+  id: string;
+  org_id: string | null;
+  owner_id: string | null;
+  project_id: string | null;
+  name: string | null;
+  geometry: GeoJSON.Geometry | null;
+  geometry_type: string;
+  color: string;
+  stroke_width: number;
+  fill_opacity: number;
+  measurement: Record<string, unknown> | null;
+  properties: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ImportedDataset {
+  id: string;
+  org_id: string | null;
+  owner_id: string | null;
+  name: string;
+  file_type: 'csv' | 'geojson' | 'kml' | 'shapefile';
+  feature_count: number;
+  geometry_type: string | null;
+  geojson: Record<string, unknown> | null;
+  original_filename: string | null;
+  properties_schema: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Tag {
+  id: string;
+  org_id: string | null;
+  name: string;
+  color: string;
+  created_at: string;
+}
+
+export interface Note {
+  id: string;
+  org_id: string | null;
+  owner_id: string | null;
+  parcel_id: string | null;
+  project_id: string | null;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SavedSearch {
+  id: string;
+  org_id: string | null;
+  owner_id: string | null;
+  name: string;
+  filters: SearchFilters;
+  viewport: Record<string, unknown> | null;
+  result_count: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SearchFilters {
+  query?: string;
+  minAcreage?: number;
+  maxAcreage?: number;
+  zoning?: string[];
+  floodZone?: boolean;
+  minValue?: number;
+  maxValue?: number;
+  owner?: string;
+  county?: string;
+  state?: string;
+  bounds?: { north: number; south: number; east: number; west: number };
+}

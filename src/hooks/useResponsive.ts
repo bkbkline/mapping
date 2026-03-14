@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useUIStore } from '@/store/uiStore';
 
 export function useResponsive() {
-  const { setIsMobile, setIsTablet, setSidebarOpen, isMobile, isTablet } = useUIStore();
+  const { setIsMobile, setIsTablet, setLeftPanelOpen, isMobile, isTablet } = useUIStore();
 
   useEffect(() => {
     const checkSize = () => {
@@ -13,14 +13,13 @@ export function useResponsive() {
       const tablet = w >= 768 && w < 1200;
       setIsMobile(mobile);
       setIsTablet(tablet);
-      if (mobile) setSidebarOpen(false);
-      if (tablet) setSidebarOpen(false);
+      if (mobile || tablet) setLeftPanelOpen(false);
     };
 
     checkSize();
     window.addEventListener('resize', checkSize);
     return () => window.removeEventListener('resize', checkSize);
-  }, [setIsMobile, setIsTablet, setSidebarOpen]);
+  }, [setIsMobile, setIsTablet, setLeftPanelOpen]);
 
   return { isMobile, isTablet };
 }

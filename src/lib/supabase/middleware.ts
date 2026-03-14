@@ -46,11 +46,18 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Authenticated users on auth pages → redirect to dashboard
+  // Redirect legacy /app/map to /app
+  if (pathname === '/app/map' || pathname.startsWith('/app/map/')) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/app';
+    return NextResponse.redirect(url);
+  }
+
+  // Authenticated users on auth pages → redirect to app
   // But never redirect /auth/callback (it handles the OAuth code exchange)
   if (user && isAuthPage && !pathname.startsWith('/auth/callback')) {
     const url = request.nextUrl.clone();
-    url.pathname = '/app/map';
+    url.pathname = '/app';
     return NextResponse.redirect(url);
   }
 

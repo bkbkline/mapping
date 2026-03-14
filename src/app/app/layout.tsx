@@ -1,7 +1,7 @@
-import AppLayoutClient from './AppLayoutClient';
+import AppShell from './AppShell';
 
 export const dynamic = 'force-dynamic';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return <AppLayoutClient>{children}</AppLayoutClient>;
+  return <AppShell>{children}</AppShell>;
 }
