@@ -263,7 +263,7 @@ export default function ParcelProfilePage() {
         <Button
           variant="outline"
           className="border-[#374151] text-[#9CA3AF]"
-          onClick={() => router.push('/app/parcels')}
+          onClick={() => router.push('/app/dashboard')}
         >
           Back to Parcels
         </Button>
@@ -316,7 +316,7 @@ export default function ParcelProfilePage() {
       <Button
         variant="ghost"
         className="mb-4 gap-2 text-[#9CA3AF] hover:text-[#F9FAFB]"
-        onClick={() => router.push('/app/parcels')}
+        onClick={() => router.push('/app/dashboard')}
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Parcels

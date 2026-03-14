@@ -246,7 +246,7 @@ export default function MapHeader({ mapId }: MapHeaderProps) {
                 onClick={() => {
                   setMenuOpen(false);
                   // Navigate to collections view for this map
-                  router.push(`/app/collections?mapId=${mapId}`);
+                  router.push('/app/dashboard');
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-xs text-[#F9FAFB] hover:bg-[#374151] transition-colors"
               >

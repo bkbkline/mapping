@@ -31,12 +31,11 @@ Map-based land intelligence platform for industrial real estate professionals. S
 ## Features
 
 - **Map Workspace** — Full Mapbox GL JS map with drawing tools, layer management, basemap switching
-- **Layer System** — Upload GeoJSON/KML/Shapefile/CSV, connect WMS/WMTS/XYZ tile services, preset layer library
+- **Layer System** — Upload GeoJSON/KML/Shapefile/CSV, connect WMS/WMTS/XYZ tile services, preset layer library (managed in Dashboard)
 - **Draw & Annotate** — Polygon, rectangle, circle, line, point tools with measurements
-- **Parcel Intelligence** — Parcel search by APN/address, zoning lookup, constraint detection
+- **Parcel Intelligence** — Parcel search by APN/address, zoning lookup, constraint detection (accessed via Dashboard)
 - **Industrial Scorecard** — Clear height, dock doors, truck court, rail access, and more
 - **Feasibility Calculator** — Full development underwriting with NOI, cap rate, DSCR analysis
-- **Collections & Kanban** — Organize parcels with pipeline status tracking
 - **Drive Time Analysis** — Mapbox Isochrone API for 30/60/90 min drive time polygons
 - **Constraint Mapping** — FEMA flood, wetlands, EPA superfund overlay with PostGIS intersection
 - **Site Planning Tools** — Setback buffer, parking calculator, truck court depth, building area
@@ -176,11 +175,10 @@ land-intel/
 │   │   ├── (auth)/             # Auth pages (login, signup, reset)
 │   │   ├── api/                # API route handlers
 │   │   ├── app/                # Authenticated app pages
-│   │   │   ├── dashboard/
+│   │   │   ├── dashboard/      # Includes Parcels + Layer Library
+│   │   │   ├── map/
 │   │   │   ├── maps/
-│   │   │   ├── collections/
-│   │   │   ├── parcels/
-│   │   │   ├── layers/
+│   │   │   ├── parcels/        # Detail view (redirects list to Dashboard)
 │   │   │   ├── exports/
 │   │   │   └── settings/
 │   │   └── auth/callback/

@@ -1,15 +1,14 @@
 'use client';
 
-import { Map, FolderOpen, Search, Layers, UserCircle } from 'lucide-react';
+import { Map, Compass, LayoutDashboard, UserCircle } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useUIStore } from '@/store/uiStore';
 
 const tabs = [
+  { label: 'Map', href: '/app/map', icon: Compass },
+  { label: 'Dashboard', href: '/app/dashboard', icon: LayoutDashboard },
   { label: 'Maps', href: '/app/maps', icon: Map },
-  { label: 'Collections', href: '/app/collections', icon: FolderOpen },
-  { label: 'Search', href: '/app/parcels', icon: Search },
-  { label: 'Layers', href: '/app/layers', icon: Layers },
   { label: 'Profile', href: '/app/settings', icon: UserCircle },
 ] as const;
 
